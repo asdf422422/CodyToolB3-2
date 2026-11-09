@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from . import api
+from .config import load_dotenv
 from .git import collect, GitError
 from .safety import mask, prepare
 from .formatting import instructions, validate, render
@@ -14,8 +15,8 @@ def parser():
     for name in ('commit', 'pr'):
         p = sub.add_parser(name)
         p.add_argument('--staged', action='store_true', help='스테이징 변경만 분석')
-        p.add_argument('--model', default='gpt-4.1-mini')
-        p.add_argument('--temperature', type=float, default=0.3)
+        p.add_argument('--model', default='gpt-5-mini')
+        p.add_argument('--temperature', type=float, default=None, help='temperature를 지원하는 모델에만 전달')
         p.add_argument('--max-tokens', type=int, default=1500)
         p.add_argument('--why', default='', help='변경 이유')
         p.add_argument('--safe-mode', action=argparse.BooleanOptionalAction, default=True)
@@ -23,9 +24,10 @@ def parser():
 
 
 def main(argv=None):
+    load_dotenv()
     p = parser()
     args = p.parse_args(argv)
-    if not 0 <= args.temperature <= 2 or args.max_tokens < 1 or not args.model.strip():
+    if (args.temperature is not None and not 0 <= args.temperature <= 2) or args.max_tokens < 1 or not args.model.strip():
         p.error('temperature는 0~2, max-tokens는 양수, model은 비어 있지 않아야 합니다.')
     calls = 0
     try:

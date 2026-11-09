@@ -190,15 +190,17 @@ class FormatTests(unittest.TestCase):
 
 class APITests(unittest.TestCase):
     def call(self):
-        return api.generate('secret', 'gpt-4.1-mini', 0.3, 1500, 'JSON', 'context')
+        return api.generate('secret', 'gpt-5-mini', None, 1500, 'JSON', 'context')
 
     def test_request_and_response(self):
-        response = {'status': 'completed', 'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': GOOD}]}]}
+        response = {'choices': [{'message': {'content': GOOD}}]}
         with patch('urllib.request.urlopen', return_value=io.BytesIO(json.dumps(response).encode())) as mock:
             self.assertEqual(self.call(), GOOD)
             body = json.loads(mock.call_args.args[0].data)
-            self.assertFalse(body['store'])
-            self.assertEqual(body['max_output_tokens'], 1500)
+            self.assertEqual(mock.call_args.args[0].full_url, 'https://copa.codyssey.kr/v1/chat/completions')
+            self.assertEqual(body['max_completion_tokens'], 1500)
+            self.assertNotIn('response_format', body)
+            self.assertNotIn('temperature', body)
             self.assertEqual(mock.call_args.kwargs['timeout'], 60)
 
     def test_http_errors_hide_body(self):
